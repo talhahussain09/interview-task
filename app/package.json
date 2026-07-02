@@ -1,0 +1,12 @@
+{
+  "name": "interview-task-app",
+  "version": "1.0.0",
+  "description": "Sample Node.js application for DevOps interview task",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
