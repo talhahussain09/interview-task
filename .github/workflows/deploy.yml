@@ -66,7 +66,9 @@ jobs:
               --name $CONTAINER_NAME \
               --restart unless-stopped \
               -p 80:3000 \
-              $IMAGE_NAME
+              -v /var/log/interview-task:/var/log/interview-task \
+              $IMAGE_NAME \
+              sh -c "npm start >> /var/log/interview-task/app.log 2>&1"
 
             docker ps
           EOF
