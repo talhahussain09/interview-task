@@ -1,0 +1,77 @@
+name: Build and Deploy Application
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/interview-task:latest
+  CONTAINER_NAME: interview-task-app
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm install
+
+      - name: Run basic test
+        working-directory: app
+        run: npm test
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t $IMAGE_NAME ./app
+
+      - name: Push Docker image
+        run: docker push $IMAGE_NAME
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/interview-task-key
+          chmod 600 ~/.ssh/interview-task-key
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy container to EC2
+        run: |
+          ssh -i ~/.ssh/interview-task-key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            set -e
+
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            docker pull $IMAGE_NAME
+
+            docker stop $CONTAINER_NAME || true
+            docker rm $CONTAINER_NAME || true
+
+            docker run -d \
+              --name $CONTAINER_NAME \
+              --restart unless-stopped \
+              -p 80:3000 \
+              $IMAGE_NAME
+
+            docker ps
+          EOF
+
+      - name: Application health check
+        run: |
+          sleep 10
+          curl -f http://${{ secrets.EC2_HOST }}/health
