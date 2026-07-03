@@ -257,6 +257,6 @@ To avoid unnecessary AWS charges, destroy the infrastructure after evaluation:
 cd terraform
 
 terraform destroy \
-  -var="ami_id=<UBUNTU_AMI_ID>" \
+  -var="ami_id=<AMI_ID>" \
   -var="admin_ip_cidr=<YOUR_PUBLIC_IP>/32"
 ```
